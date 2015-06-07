@@ -11,6 +11,13 @@
 
 #include <MinHook.h>
 
+#include <d3d9.h>
+
+#pragma comment(lib, "d3d9.lib")
+#pragma comment(lib, "d3dx9.lib")
+#pragma comment(lib, "dxguid.lib")
+#pragma comment(lib, "dxerr.lib")
+
 template <typename T>
 inline MH_STATUS MH_CreateHookEx(LPVOID pTarget, LPVOID pDetour, T** ppOriginal) {
 	return MH_CreateHook(pTarget, pDetour, reinterpret_cast<LPVOID*>(ppOriginal));
@@ -94,6 +101,8 @@ void __stdcall DetouredSleep(DWORD dwMilliseconds) {
 }
 
 int main() {
+
+	Direct3DCreate9(0);
 
 	MH_Initialize();
 
