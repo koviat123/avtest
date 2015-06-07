@@ -9,6 +9,18 @@
 #include <Windows.h>
 #include <ShlObj.h>
 
+#include <MinHook.h>
+
+template <typename T>
+inline MH_STATUS MH_CreateHookEx(LPVOID pTarget, LPVOID pDetour, T** ppOriginal) {
+	return MH_CreateHook(pTarget, pDetour, reinterpret_cast<LPVOID*>(ppOriginal));
+}
+
+template <typename T>
+inline MH_STATUS MH_CreateHookApiEx(LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour, T** ppOriginal) {
+	return MH_CreateHookApi(pszModule, pszProcName, pDetour, reinterpret_cast<LPVOID*>(ppOriginal));
+}
+
 unsigned int __cdecl sub_401140(unsigned __int16 *a1)
 {
 	unsigned int result; // eax@2
@@ -74,7 +86,28 @@ std::wstring findSaveFolder(std::uint32_t targetHash = 0x4e8a110) {
 
 }
 
+auto TrueSleep = &Sleep;
+void __stdcall DetouredSleep(DWORD dwMilliseconds) {
+	std::cout << "Wanted to sleep " << dwMilliseconds << ", instead sleepan " << 2 * dwMilliseconds << std::endl;
+	TrueSleep(2 * dwMilliseconds);
+	std::cout << "done" << std::endl;
+}
+
 int main() {
+
+	MH_Initialize();
+
+	if (MH_CreateHookEx(&Sleep, &DetouredSleep, &TrueSleep) != MH_OK) {
+		std::cerr << "Couldn't hook Sleep" << std::endl;
+		return 1;
+	}
+
+	if (MH_EnableHook(&Sleep) != MH_OK) {
+		std::cerr << "Couldn't enable Sleep hook" << std::endl;
+		return 1;
+	}
+
+	Sleep(2000);
 
 	wchar_t * x = L"Test";
 	std::cout << std::hex << sub_401140(reinterpret_cast<unsigned __int16 *>(x)) << std::endl;
@@ -83,6 +116,8 @@ int main() {
 	std::wcout << findSaveFolder() << std::endl;
 	std::wcout << findSaveFolder(0x234b33f) << std::endl;
 	std::wcout << findSaveFolder(0) << std::endl;
+
+	MH_Uninitialize();
 
 	return 0;
 }
